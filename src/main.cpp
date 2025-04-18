@@ -130,7 +130,7 @@ void loop() {
   } else if (isAuto) {
     Random(pt);
   }
-  delay(10);
+  delay(20);
   return;
 }
 
