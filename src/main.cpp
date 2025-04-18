@@ -111,18 +111,9 @@ void loop() {
       args.putBool("isAuto", false);
       args.end();
       esp_restart();
-      // pt.AMin = args.getInt("minA"), pt.AMax = args.getInt("maxA"),
-      // pt.timeMin = args.getInt("minTime"), pt.timeMax =
-      // args.getInt("maxTime");
-      // args.end();
-      // Random(pt);
     }
     String revString = rxContent.c_str();
     if (revString == "random") {
-      // pt.AMin = args.getInt("minA"), pt.AMax = args.getInt("maxA"),
-      // pt.timeMin = args.getInt("minTime"), pt.timeMax =
-      // args.getInt("maxTime");
-      // pt.AMin = 120, pt.AMax = 200, pt.timeMax = 10, pt.timeMin = 3;
       args.begin("args");
       args.putBool("isAuto", true);
       args.end();
