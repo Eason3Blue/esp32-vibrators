@@ -82,25 +82,32 @@ void Random(RandomParameters pt) {
 RandomParameters pt;
 // 主体函数
 void setup() {
-  Serial.begin(115200);
   BLE_INIT();
   ledcSetup(ledcChannel, ledcFreq, ledcBits);
   ledcAttachPin(pinPWM, ledcChannel);
   args.begin("args");
   isAuto = args.getBool("isAuto");
+  if (!args.getBool("isInit")) {
+    args.putInt("AMin", 120);
+    args.putInt("AMax", 200);
+    args.putInt("timeMax", 10);
+    args.putInt("timeMin", 3);
+    args.putBool("isInit", true);
+  }
+  args.getInt("AMin");
+  args.getInt("AMax");
+  args.getInt("timeMax");
+  args.getInt("timeMin");
   args.end();
-  pt.AMin = 120, pt.AMax = 200, pt.timeMax = 10, pt.timeMin = 3;
   return;
 }
 
 bool haveBeenConnected = false;
 void loop() {
   if (isConnected && !haveBeenConnected) {
-    Serial.println("设备已连接");
     haveBeenConnected = true;
   }
   if (!isConnected && haveBeenConnected) {
-    Serial.println("设备断开链接，重新广播");
     delay(500);
     haveBeenConnected = false;
     Server->startAdvertising();
