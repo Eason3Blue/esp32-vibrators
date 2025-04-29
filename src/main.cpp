@@ -7,12 +7,13 @@
 #include <Preferences.h>
 #include <string.h>
 const int pinPWM = 19;
-const int ledcChannel = 1, ledcFreq = 10000, ledcBits = 8;
+const int ledcChannel = 0, ledcFreq = 20000, ledcBits = 8;
 Preferences args;
 bool isAuto;
 typedef struct {
   int timeMin, timeMax, AMin, AMax, count;
 } RandomParameters;
+RandomParameters pt;
 
 BLEServer *Server;
 BLEService *Service;
@@ -44,7 +45,6 @@ class RXCharacteristicCallBacks // 读取写入特征值
     if (!rxContent.empty()) {
       isReceived = true;
       BLE_Println("Received: " + (String)rxContent.c_str() + '\n');
-      Serial.println("Received: " + (String)rxContent.c_str() + '\n');
     } else {
       isReceived = false;
     }
@@ -72,14 +72,12 @@ void Random(RandomParameters pt) {
   int selectedTime = esp_random() % (pt.timeMax - pt.timeMin + 1) + pt.timeMin;
   int selectedA = esp_random() % (pt.AMax - pt.AMin + 1) + pt.AMin;
   ledcWrite(ledcChannel, selectedA);
-  BLE_Println("Count:" + IntTostdString(pt.count) +
-              " \n\tSelectedTime = " + IntTostdString(selectedTime) +
+  BLE_Println("SelectedTime = " + IntTostdString(selectedTime) +
               "\n\tSelectedA = " + IntTostdString(selectedA));
   delay(selectedTime * 1000);
   return;
 }
 
-RandomParameters pt;
 // 主体函数
 void setup() {
   BLE_INIT();
@@ -104,10 +102,10 @@ void setup() {
 
 bool haveBeenConnected = false;
 void loop() {
-  if (isConnected && !haveBeenConnected) {
+  if (isConnected && !haveBeenConnected) { //链接成功
     haveBeenConnected = true;
   }
-  if (!isConnected && haveBeenConnected) {
+  if (!isConnected && haveBeenConnected) { //链接丢失 重新广播
     delay(500);
     haveBeenConnected = false;
     Server->startAdvertising();
