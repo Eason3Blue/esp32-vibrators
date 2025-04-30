@@ -84,14 +84,15 @@ void setup() {
   ledcSetup(ledcChannel, ledcFreq, ledcBits);
   ledcAttachPin(pinPWM, ledcChannel);
   args.begin("args");
-  isAuto = args.getBool("isAuto");
   if (!args.getBool("isInit")) {
     args.putInt("AMin", 120);
     args.putInt("AMax", 200);
     args.putInt("timeMax", 10);
     args.putInt("timeMin", 3);
     args.putBool("isInit", true);
+    args.putBool("isAuto", false);
   }
+  isAuto = args.getBool("isAuto");
   args.getInt("AMin");
   args.getInt("AMax");
   args.getInt("timeMax");
@@ -102,10 +103,10 @@ void setup() {
 
 bool haveBeenConnected = false;
 void loop() {
-  if (isConnected && !haveBeenConnected) { //链接成功
+  if (isConnected && !haveBeenConnected) { // 链接成功
     haveBeenConnected = true;
   }
-  if (!isConnected && haveBeenConnected) { //链接丢失 重新广播
+  if (!isConnected && haveBeenConnected) { // 链接丢失 重新广播
     delay(500);
     haveBeenConnected = false;
     Server->startAdvertising();
