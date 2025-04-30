@@ -85,18 +85,23 @@ void setup() {
   ledcAttachPin(pinPWM, ledcChannel);
   args.begin("args");
   if (!args.getBool("isInit")) {
-    args.putInt("AMin", 120);
-    args.putInt("AMax", 200);
-    args.putInt("timeMax", 10);
-    args.putInt("timeMin", 3);
+    // args.putInt("AMin", 160);
+    // args.putInt("AMax", 220);
+    // args.putInt("timeMax", 10);
+    // args.putInt("timeMin", 3);
     args.putBool("isInit", true);
     args.putBool("isAuto", false);
   }
+  // isAuto = args.getBool("isAuto");
+  // pt.AMin = args.getInt("AMin");
+  // pt.AMax = args.getInt("AMax");
+  // pt.timeMax = args.getInt("timeMax");
+  // pt.timeMin = args.getInt("timeMin");
   isAuto = args.getBool("isAuto");
-  pt.AMin = args.getInt("AMin");
-  pt.AMax = args.getInt("AMax");
-  pt.timeMax = args.getInt("timeMax");
-  pt.timeMin = args.getInt("timeMin");
+  pt.AMin = 160;
+  pt.AMax = 220;
+  pt.timeMax = 10;
+  pt.timeMin = 3;
   args.end();
   return;
 }
