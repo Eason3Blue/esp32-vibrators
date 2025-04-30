@@ -7,11 +7,11 @@
 #include <Preferences.h>
 #include <string.h>
 const int pinPWM = 19;
-const int ledcChannel = 0, ledcFreq = 20000, ledcBits = 8;
+const int ledcChannel = 1, ledcFreq = 20000, ledcBits = 8;
 Preferences args;
 bool isAuto;
 typedef struct {
-  int timeMin, timeMax, AMin, AMax, count;
+  int timeMin, timeMax, AMin, AMax;
 } RandomParameters;
 RandomParameters pt;
 
@@ -73,7 +73,7 @@ void Random(RandomParameters pt) {
   int selectedA = esp_random() % (pt.AMax - pt.AMin + 1) + pt.AMin;
   ledcWrite(ledcChannel, selectedA);
   BLE_Println("SelectedTime = " + IntTostdString(selectedTime) +
-              "\n\tSelectedA = " + IntTostdString(selectedA));
+              "\nSelectedA = " + IntTostdString(selectedA));
   delay(selectedTime * 1000);
   return;
 }
@@ -93,10 +93,10 @@ void setup() {
     args.putBool("isAuto", false);
   }
   isAuto = args.getBool("isAuto");
-  args.getInt("AMin");
-  args.getInt("AMax");
-  args.getInt("timeMax");
-  args.getInt("timeMin");
+  pt.AMin = args.getInt("AMin");
+  pt.AMax = args.getInt("AMax");
+  pt.timeMax = args.getInt("timeMax");
+  pt.timeMin = args.getInt("timeMin");
   args.end();
   return;
 }
