@@ -8,6 +8,7 @@
 #include <string.h>
 const int pinPWM = 19;
 const int ledcChannel = 1, ledcFreq = 20000, ledcBits = 8;
+const int AMax = 220, AMin = 160, timeMax = 10, timeMin = 3; // 默认自动模式参数
 Preferences args;
 bool isAuto;
 typedef struct {
@@ -23,8 +24,9 @@ bool isConnected = false, isReceived = false;
 #define CharacteristicRXUUID "710ab493-bdb2-40e4-89de-9983ce26b257"
 #define CharacteristicTXUUID "2324df80-cb64-4421-ae79-cec76de0e0e9"
 std::string rxContent, txContent;
-String IntTostdString(int);
+String IntToString(int);
 void BLE_Println(String);
+bool NumCheck(int, int, int);
 
 // 函数定义区
 class ClientCallBacks : public BLEServerCallbacks { // 链接状态回调
@@ -44,7 +46,6 @@ class RXCharacteristicCallBacks // 读取写入特征值
     rxContent = bdCharacterisitc->getValue();
     if (!rxContent.empty()) {
       isReceived = true;
-      BLE_Println("Received: " + (String)rxContent.c_str() + '\n');
     } else {
       isReceived = false;
     }
@@ -72,9 +73,10 @@ void Random(RandomParameters pt) {
   int selectedTime = esp_random() % (pt.timeMax - pt.timeMin + 1) + pt.timeMin;
   int selectedA = esp_random() % (pt.AMax - pt.AMin + 1) + pt.AMin;
   ledcWrite(ledcChannel, selectedA);
-  BLE_Println("SelectedTime = " + IntTostdString(selectedTime) +
-              "\nSelectedA = " + IntTostdString(selectedA));
+  BLE_Println("Info:随机完成，现在的参数是 " + IntToString(selectedTime) + " " +
+              IntToString(selectedA));
   delay(selectedTime * 1000);
+  BLE_Println("Debug:周期结束，返回...");
   return;
 }
 
@@ -84,29 +86,13 @@ void setup() {
   ledcSetup(ledcChannel, ledcFreq, ledcBits);
   ledcAttachPin(pinPWM, ledcChannel);
   args.begin("args");
-  if (!args.getBool("isInit")) {
-    // args.putInt("AMin", 160);
-    // args.putInt("AMax", 220);
-    // args.putInt("timeMax", 10);
-    // args.putInt("timeMin", 3);
-    args.putBool("isInit", true);
-    args.putBool("isAuto", false);
-  }
-  // isAuto = args.getBool("isAuto");
-  // pt.AMin = args.getInt("AMin");
-  // pt.AMax = args.getInt("AMax");
-  // pt.timeMax = args.getInt("timeMax");
-  // pt.timeMin = args.getInt("timeMin");
   isAuto = args.getBool("isAuto");
-  pt.AMin = 160;
-  pt.AMax = 220;
-  pt.timeMax = 10;
-  pt.timeMin = 3;
   args.end();
   return;
 }
 
 bool haveBeenConnected = false;
+String brevString;
 void loop() {
   if (isConnected && !haveBeenConnected) { // 链接成功
     haveBeenConnected = true;
@@ -116,42 +102,86 @@ void loop() {
     haveBeenConnected = false;
     Server->startAdvertising();
   }
-  if (isReceived) {
-    if (isAuto) {
+
+  args.begin("args");
+  isAuto = args.getBool("isAuto");
+  args.end();
+  String revString = rxContent.c_str();
+  if (isReceived && revString != brevString) {
+    brevString = revString;
+    if (isAuto) { // 退出自动模式
+      BLE_Println("Debug:退出自动模式...");
       args.begin("args");
       args.putBool("isAuto", false);
       args.end();
-      esp_restart();
+      BLE_Println("Debug:正在重启...");
+      delay(500);
+      return;
     }
-    String revString = rxContent.c_str();
-    if (revString == "random") {
-      args.begin("args");
-      args.putBool("isAuto", true);
-      args.end();
-      esp_restart();
+    if (revString.substring(0, 6) == "random") { // 识别输入参数并进入自动模式
+      BLE_Println("Debug:进入Random参数识别...");
+      sscanf(revString.substring(7).c_str(), "%d %d %d %d", &pt.AMax, &pt.AMin,
+             &pt.timeMax, &pt.timeMin);
+      if (NumCheck(pt.AMax, 1, 255) && NumCheck(pt.AMin, 1, 255) &&
+          NumCheck(pt.timeMax, 1, 60) && NumCheck(pt.timeMin, 1, 60) &&
+          pt.AMax >= pt.AMin && pt.timeMax >= pt.timeMin) {
+        BLE_Println("Debug:参数识别成功，现在的参数是 " + IntToString(pt.AMax) +
+                    " " + IntToString(pt.AMin) + " " + IntToString(pt.timeMax) +
+                    " " + IntToString(pt.timeMin));
+        args.begin("args");
+        args.putInt("AMin", pt.AMin);
+        args.putInt("AMax", pt.AMax);
+        args.putInt("timeMax", pt.timeMax);
+        args.putInt("timeMin", pt.timeMin);
+        args.putBool("isAuto", true);
+        args.end();
+      } else if (revString == "random") { // 使用默认参数进入自动模式
+        BLE_Println("Info:使用默认参数进入自动模式...");
+        args.begin("args");
+        args.putBool("isAuto", true);
+        args.putInt("AMin", AMin);
+        args.putInt("AMax", AMax);
+        args.putInt("timeMax", timeMax);
+        args.putInt("timeMin", timeMin);
+        args.end();
+      } else {
+        BLE_Println("Info:错误参数输入，忽略");
+      }
+      BLE_Println("Debug:正在重启...");
+      delay(1000);
+      return;
     }
+    BLE_Println("Debug:进入手动控制判断...");
     int dutyCycle = revString.toInt();
-    if (dutyCycle < 0 || dutyCycle > 255) {
-      BLE_Println("非法输入，忽略");
-      dutyCycle = 0;
-      rxContent.clear();
-    } else {
+    if (dutyCycle >= 0 && dutyCycle <= 255) {
+      BLE_Println("Debug:进入手动模式，现在的参数是 " + IntToString(dutyCycle));
       ledcWrite(ledcChannel, dutyCycle);
+    } else {
+      BLE_Println("Info:非法输入，忽略");
+      dutyCycle = 0;
     }
-  } else if (isAuto) {
+  } else if (isAuto) { // 自动进入自动模式
+    BLE_Println("Info:识别到isAuto且无输入，进入自动模式...");
+    args.begin("args");
+    pt.AMax = args.getInt("AMax");
+    pt.AMin = args.getInt("AMin");
+    pt.timeMax = args.getInt("timeMax");
+    pt.timeMin = args.getInt("timeMin");
     Random(pt);
   }
-  delay(20);
+  delay(100);
   return;
 }
 
 // 方法定义区
-String IntTostdString(int d) {
+String IntToString(int d) {
   String a = "";
   while (d) {
     a = (char)(d % 10 + '0') + a;
     d /= 10;
   }
+  if (d == 0 && a.isEmpty())
+    return "0";
   return a;
 }
 
@@ -160,4 +190,12 @@ void BLE_Println(String in) {
   TXCharacteristic->setValue(txContent);
   TXCharacteristic->notify();
   txContent.clear();
+}
+
+bool NumCheck(int a, int min, int max) {
+  if (a >= min && a <= max) {
+    return true;
+  } else {
+    return false;
+  }
 }
