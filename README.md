@@ -1,7 +1,7 @@
 # ESP32-ManVibrators
 
 #### 介绍
-(点击跳转到本家)[https://gitee.com/people_on_the_horizon/esp32-vibrators]
+[点击跳转到本家](https://gitee.com/people_on_the_horizon/esp32-vibrators)
 
 使用Arduino编写的ESP32的使用pwm控制电机转动的程序。
 可以实现0-255手动调节以及自动随机调节(幅度和时间的最大值和最小值可以手动在线设置)。
